@@ -1,0 +1,1 @@
+export class PauseMenu { constructor({resume=()=>{},quit=()=>{}}={}) { document.getElementById('btn-resume')?.addEventListener('click',resume); document.getElementById('btn-quit')?.addEventListener('click',quit); } }
