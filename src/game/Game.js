@@ -55,8 +55,7 @@ export class Game {
   }
   pause() { this.running = false; this.sound.stopEngine?.(); }
   reset() {
-    const spawn = this.world.roads.getRandomRoadPosition();
-    this.player.motorcycle.setPosition(spawn.x, 0, spawn.z);
+    this.player.motorcycle.setPosition(0, 0, 0);
     this.player.motorcycle.setRotation(0);
     this.player.motorcycle.speed = 0;
     this.player.score = 0; this.player.deliveries = 0; this.player.satisfaction = 100;
@@ -68,7 +67,7 @@ export class Game {
   setDestination() {
     if (this.destination) this.world.removeDeliveryMarker(this.destination);
     const p = this.player.getPosition();
-    const x = Math.round(p.x / 60) * 60;
+    const x = p.x;
     const z = p.z + 100;
     this.destination = this.world.createDeliveryMarker(THREE.MathUtils.clamp(x, -80, 80), z, 'dropoff');
     this.delivered = false;
