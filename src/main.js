@@ -67,7 +67,7 @@ async function ensureNetwork() {
   socket.off('room:players'); socket.on('room:players', data => { roomPlayers = data.players || []; renderLobbyPlayers(roomPlayers); game?.syncRemotePlayers?.(roomPlayers, network?.socket?.id); });
   socket.off('player:state'); socket.on('player:state', data => game?.updateRemotePlayer?.(data.id, data.state));
   socket.off('race:started'); socket.on('race:started', () => { if (raceStarted) return; raceStarted = true; notify('بدا السباق!'); startGame('endless'); });
-  socket.on('room:error', data => notify(data && data.message || 'وقع مشكل فالغرفة.'));
+  socket.off('room:error'); socket.on('room:error', data => notify(data && data.message || 'وقع مشكل فالغرفة.'));
   return socket;
 }
 
