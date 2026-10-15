@@ -1,0 +1,1 @@
+export class HUD { update({score=0,satisfaction=100,deliveries=0,speed=0}={}) { const values={'hud-score':score,'hud-satisfaction':`${satisfaction}%`,'hud-deliveries':deliveries,'hud-speed':Math.round(speed)}; for(const [id,value] of Object.entries(values)){const el=document.getElementById(id);if(el)el.textContent=String(value);} } }
