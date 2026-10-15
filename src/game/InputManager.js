@@ -18,9 +18,8 @@ export class InputManager {
         };
 
         this.setupKeyboard();
-        if (this.isMobile) {
-            this.setupTouch();
-        }
+        // Bind touch and mouse controls on all devices so the on-screen controls are usable in desktop testing too.
+        this.setupTouch();
     }
 
     detectMobile() {
