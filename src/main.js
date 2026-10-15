@@ -19,6 +19,7 @@ let network = null;
 let roomManager = null;
 let roomHost = false;
 let raceStarted = false;
+let roomPlayers = [];
 
 function notify(message) {
   const el = $('game-notification');
@@ -63,7 +64,8 @@ async function ensureNetwork() {
   if (!network) { const settings = getSettings(); const url = storage.get('serverUrl', settings.serverUrl || import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'); network = new NetworkManager(url); roomManager = new RoomManager(network); }
   const socket = await network.connect();
   const status = $('connection-status'); if (status) { status.textContent = 'متصل بالسيرفر'; status.classList.remove('disconnected'); status.classList.add('connected'); }
-  socket.off('room:players'); socket.on('room:players', data => renderLobbyPlayers(data.players || []));
+  socket.off('room:players'); socket.on('room:players', data => { roomPlayers = data.players || []; renderLobbyPlayers(roomPlayers); game?.syncRemotePlayers?.(roomPlayers); });
+  socket.off('player:state'); socket.on('player:state', data => game?.updateRemotePlayer?.(data.id, data.state));
   socket.off('race:started'); socket.on('race:started', () => { if (raceStarted) return; raceStarted = true; notify('بدا السباق!'); startGame('endless'); });
   socket.on('room:error', data => notify(data && data.message || 'وقع مشكل فالغرفة.'));
   return socket;
@@ -108,7 +110,7 @@ function startGame(nextMode = 'mission', missionIndex = 0) {
         else window.setTimeout(openOrder, 1800);
       }
     });
-    game.reset(); game.activateAudio?.(); game.start(); paused = false;
+    game.reset(); game.syncRemotePlayers?.(roomPlayers); game.activateAudio?.(); game.start(); paused = false;
     hideScreens(); $('hud').style.display = 'block'; $('mobile-controls').style.display = 'block';
     $('hud-timer-container').style.display = mode === 'endless' ? 'none' : 'block';
     updateHUD(); window.setTimeout(openOrder, 1800);
