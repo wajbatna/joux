@@ -1,0 +1,1 @@
+export class Garage { constructor(onColor=()=>{}) { const picker=document.getElementById('color-picker'); if(!picker)return; ['#ff6b35','#e63946','#2a9d8f','#f4a261','#457b9d'].forEach(color=>{const b=document.createElement('button');b.className='color-swatch';b.style.background=color;b.onclick=()=>onColor(color);picker.append(b);}); } }
