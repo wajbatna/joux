@@ -81,7 +81,7 @@ function startGame(nextMode = 'mission', missionIndex = 0) {
         else window.setTimeout(openOrder, 1800);
       }
     });
-    game.reset(); game.start(); paused = false;
+    game.reset(); game.activateAudio?.(); game.start(); paused = false;
     hideScreens(); $('hud').style.display = 'block'; $('mobile-controls').style.display = 'block';
     $('hud-timer-container').style.display = mode === 'endless' ? 'none' : 'block';
     updateHUD(); window.setTimeout(openOrder, 1800);
