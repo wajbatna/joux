@@ -1,0 +1,1 @@
+export class MobileControls { show(){const el=document.getElementById('mobile-controls');if(el)el.style.display='block';} hide(){const el=document.getElementById('mobile-controls');if(el)el.style.display='none';} }
