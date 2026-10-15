@@ -1,0 +1,1 @@
+export class ResultsScreen { show({score=0,deliveries=0}={}) { const details=document.getElementById('results-details'); if(details)details.textContent=`التوصيلات: ${deliveries}`; const total=document.getElementById('results-total'); if(total)total.textContent=`${score} نقطة`; } }
