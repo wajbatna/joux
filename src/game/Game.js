@@ -66,10 +66,10 @@ export class Game {
     this.destination = null;
     this.callbacks.onSpeed?.(0);
   }
-  syncRemotePlayers(players = []) {
-    const live = new Set(players.map(p => p.id).filter(id => id && id !== this.input?.playerId));
+  syncRemotePlayers(players = [], localPlayerId = null) {
+    const live = new Set(players.map(p => p.id).filter(id => id && id !== localPlayerId));
     players.forEach(p => {
-      if (!p.id || p.id === this.input?.playerId) return;
+      if (!p.id || p.id === localPlayerId) return;
       if (!this.remotePlayers.has(p.id)) this.remotePlayers.set(p.id, new RemotePlayer(this.scene, p.id, p.name || 'Livreur', p.bikeColor || 0x33aaff));
     });
     for (const [id, remote] of this.remotePlayers) {
