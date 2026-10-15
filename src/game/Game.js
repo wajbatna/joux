@@ -53,9 +53,10 @@ export class Game {
     this.clock.start();
     requestAnimationFrame(this.animate);
   }
-  pause() { this.running = false; this.sound.stop?.(); }
+  pause() { this.running = false; this.sound.stopEngine?.(); }
   reset() {
-    this.player.motorcycle.setPosition(0, 0, 0);
+    const spawn = this.world.roads.getRandomRoadPosition();
+    this.player.motorcycle.setPosition(spawn.x, 0, spawn.z);
     this.player.motorcycle.setRotation(0);
     this.player.motorcycle.speed = 0;
     this.player.score = 0; this.player.deliveries = 0; this.player.satisfaction = 100;
@@ -73,11 +74,12 @@ export class Game {
     this.delivered = false;
   }
   setBikeColor(color) { this.player.motorcycle.setColor(Number.parseInt(String(color).replace('#',''), 16)); }
+  activateAudio() { this.sound.init(); this.sound.resume(); }
   setAction(action, active = true) {
     const map = { forward: 'accelerate', brake: 'brake', left: 'left', right: 'right' };
     if (map[action]) this.input.state[map[action]] = active;
   }
-  horn() { this.sound.horn?.(); this.callbacks.onHorn?.(); }
+  horn() { this.sound.init(); this.sound.resume(); this.sound.playHorn?.(); this.callbacks.onHorn?.(); }
   resize() {
     if (!this.renderer || !this.camera) return;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -90,6 +92,7 @@ export class Game {
     const dt = Math.min(Math.max((now - this.lastTime) / 1000, 0), 0.04);
     this.lastTime = now;
     this.input.update();
+    this.sound.playEngineSound?.(Math.abs(this.player.getSpeed()), GAME_CONFIG.MOTO_MAX_SPEED);
     if (this.input.consumePause() && !this.lastPause) this.callbacks.onPause?.();
     if (this.input.consumeCamera()) this.cameraRig.toggleMode();
     const input = this.input.state;
