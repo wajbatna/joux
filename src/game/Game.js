@@ -7,6 +7,7 @@ import { GameCamera } from './Camera.js';
 import { InputManager } from './InputManager.js';
 import { World } from '../world/World.js';
 import { SoundManager } from './SoundManager.js';
+import { RemotePlayer } from '../multiplayer/RemotePlayer.js';
 
 export class Game {
   constructor(canvas, callbacks = {}) {
@@ -41,6 +42,7 @@ export class Game {
     this.sound = new SoundManager();
     this.clock = new THREE.Clock();
     this.destination = null;
+    this.remotePlayers = new Map();
     this.animate = this.animate.bind(this);
     this.resize();
     this.reset();
@@ -63,6 +65,22 @@ export class Game {
     this.world.clearDeliveryMarkers();
     this.destination = null;
     this.callbacks.onSpeed?.(0);
+  }
+  syncRemotePlayers(players = []) {
+    const live = new Set(players.map(p => p.id).filter(id => id && id !== this.input?.playerId));
+    players.forEach(p => {
+      if (!p.id || p.id === this.input?.playerId) return;
+      if (!this.remotePlayers.has(p.id)) this.remotePlayers.set(p.id, new RemotePlayer(this.scene, p.id, p.name || 'Livreur', p.bikeColor || 0x33aaff));
+    });
+    for (const [id, remote] of this.remotePlayers) {
+      if (!live.has(id)) { remote.dispose(); this.remotePlayers.delete(id); }
+    }
+  }
+  updateRemotePlayer(id, state = {}) {
+    if (!id || !state) return;
+    let remote = this.remotePlayers.get(id);
+    if (!remote) { remote = new RemotePlayer(this.scene, id, 'Livreur', 0x33aaff); this.remotePlayers.set(id, remote); }
+    remote.updateTarget(Number(state.x) || 0, 0, Number(state.z) || 0, Number(state.rotation) || 0, Number(state.speed) || 0);
   }
   setDestination() {
     if (this.destination) this.world.removeDeliveryMarker(this.destination);
@@ -104,6 +122,7 @@ export class Game {
     if (collided) this.callbacks.onCollision?.();
     const position = this.player.getPosition();
     this.world.update(dt, position);
+    for (const remote of this.remotePlayers.values()) remote.update(dt);
     this.cameraRig.update(position, this.player.getRotation(), this.player.getSpeed(), dt);
     this.elapsed += dt;
 
