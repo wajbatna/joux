@@ -253,9 +253,10 @@ export class Motorcycle {
     }
 
     setColor(color) {
+        const previousColor = this.color;
         this.color = color;
         this.body.traverse((child) => {
-            if (child.isMesh && child.material.color && child.material.color.getHex() === this.color) {
+            if (child.isMesh && child.material?.color && child.material.color.getHex() === previousColor) {
                 child.material.color.setHex(color);
             }
         });
