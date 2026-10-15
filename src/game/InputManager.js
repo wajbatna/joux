@@ -31,9 +31,9 @@ export class InputManager {
     setupKeyboard() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            if (e.code === 'Escape') this.state.pause = true;
+            if (e.code === 'Escape' || e.code === 'KeyP') this.state.pause = true;
             if (e.code === 'KeyC') this.state.camera = true;
-            e.preventDefault();
+            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code) && !['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName)) e.preventDefault();
         });
 
         window.addEventListener('keyup', (e) => {
