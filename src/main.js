@@ -1,6 +1,8 @@
 import { Game } from './game/Game.js';
 import { Storage, loadData, saveData, getSettings, saveSettings, getPlayerProfile, savePlayerProfile } from './utils/Storage.js';
 import { MISSION_DATA } from './utils/Constants.js';
+import { NetworkManager } from './multiplayer/NetworkManager.js';
+import { RoomManager } from './multiplayer/RoomManager.js';
 
 const $ = id => document.getElementById(id);
 const storage = new Storage();
@@ -13,6 +15,10 @@ let satisfaction = 100;
 let paused = true;
 let orderOpen = false;
 let orderTimer = null;
+let network = null;
+let roomManager = null;
+let roomHost = false;
+let raceStarted = false;
 
 function notify(message) {
   const el = $('game-notification');
@@ -43,6 +49,26 @@ function updateHUD() {
   $('hud-satisfaction').textContent = `${Math.max(0, satisfaction)}%`;
   $('garage-coins').textContent = String(storage.get('coins', 0));
 }
+function renderLobbyPlayers(players = []) {
+  const root = $('lobby-players'); if (!root) return; root.replaceChildren();
+  players.forEach((player, index) => {
+    const card = document.createElement('div'); card.className = 'lobby-player-card';
+    const icon = document.createElement('div'); icon.className = 'player-icon'; icon.textContent = index === 0 ? '🏍️' : '🛵';
+    const name = document.createElement('div'); name.className = 'player-name'; name.textContent = player.name || 'Livreur';
+    card.append(icon, name); root.append(card);
+  });
+  $('lobby-status').textContent = String(players.length) + ' لاعب(ين) فالغرفة';
+}
+async function ensureNetwork() {
+  if (!network) { const settings = getSettings(); const url = storage.get('serverUrl', settings.serverUrl || import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'); network = new NetworkManager(url); roomManager = new RoomManager(network); }
+  const socket = await network.connect();
+  const status = $('connection-status'); if (status) { status.textContent = 'متصل بالسيرفر'; status.classList.remove('disconnected'); status.classList.add('connected'); }
+  socket.off('room:players'); socket.on('room:players', data => renderLobbyPlayers(data.players || []));
+  socket.off('race:started'); socket.on('race:started', () => { if (raceStarted) return; raceStarted = true; notify('بدا السباق!'); startGame('endless'); });
+  socket.on('room:error', data => notify(data && data.message || 'وقع مشكل فالغرفة.'));
+  return socket;
+}
+
 function openOrder() {
   if (orderOpen || paused || mode === 'endless') return;
   orderOpen = true;
@@ -73,6 +99,7 @@ function startGame(nextMode = 'mission', missionIndex = 0) {
       onInteract: acceptOrder,
       onSpeed: speed => { $('hud-speed').textContent = String(Math.round(speed)); },
       onCollision: () => { satisfaction = Math.max(0, satisfaction - 2); updateHUD(); },
+      onPlayerState: state => { if (network && network.socket && network.socket.connected) network.emit('player:state', state); },
       onDestination: () => {
         deliveries++; score += MISSION_DATA[currentMission % MISSION_DATA.length].difficulty * 100;
         storage.set('coins', storage.get('coins', 0) + 10);
@@ -117,19 +144,32 @@ $('btn-singleplayer')?.addEventListener('click',()=>showScreen('sp-menu'));
 $('btn-sp-missions')?.addEventListener('click',()=>{renderMissions();showScreen('mission-select');});
 $('btn-sp-endless')?.addEventListener('click',()=>startGame('endless'));
 $('btn-sp-tutorial')?.addEventListener('click',()=>{startGame('endless');notify('W/↑ تسريع · S/↓ فرامل · A/D أو الأسهم للتوجيه · E قبول الطلب');});
-$('btn-multiplayer')?.addEventListener('click',()=>{showScreen('mp-menu');notify('اللعب الجماعي يتطلب نشر وتشغيل السيرفر.');});
-$('btn-mp-create')?.addEventListener('click',()=>notify('شغّل سيرفر Socket.IO قبل إنشاء غرفة.'));
+$('btn-multiplayer')?.addEventListener('click',()=>showScreen('mp-menu'));
+$('btn-mp-create')?.addEventListener('click',async()=>{
+  try { await ensureNetwork(); const room = await roomManager.create('Livreur'); roomHost = true; raceStarted = false;
+    $('lobby-room-code').textContent = room.code; $('btn-start-race').style.display = 'block'; renderLobbyPlayers(room.players || []); showScreen('multiplayer-lobby'); notify('الغرفة تخلقات! شارك الكود مع صحابك.');
+  } catch (error) { console.error(error); notify('تعذر الاتصال بالسيرفر. تحقق من عنوانه وتشغيله.'); }
+});
 $('btn-mp-join')?.addEventListener('click',()=>showScreen('join-room-screen'));
 $('btn-mp-public')?.addEventListener('click',()=>notify('خاص السيرفر يكون متصل باش تلقى اللاعبين.'));
-$('btn-join-confirm')?.addEventListener('click',()=>notify('تحقق من عنوان السيرفر ثم حاول مجدداً.'));
+$('btn-join-confirm')?.addEventListener('click',async()=>{
+  const code = $('room-code-input').value.trim().toUpperCase(); if (!code) { notify('دخل كود الغرفة أولاً.'); return; }
+  try { await ensureNetwork(); const room = await roomManager.join(code, 'Livreur'); roomHost = false; raceStarted = false;
+    $('lobby-room-code').textContent = room.code; $('btn-start-race').style.display = 'none'; renderLobbyPlayers(room.players || []); showScreen('multiplayer-lobby');
+  } catch (error) { console.error(error); notify(error && error.message || 'ما قدرناش ندخلوك للغرفة.'); }
+});
 $('btn-garage')?.addEventListener('click',()=>showScreen('garage-screen'));
 $('btn-settings')?.addEventListener('click',()=>{const s=getSettings();$('setting-music').value=s.musicVolume??50;$('setting-sfx').value=s.sfxVolume??70;$('setting-quality').value=s.quality||'medium';$('setting-shadows').checked=s.shadows!==false;$('setting-sensitivity').value=s.sensitivity??50;$('setting-server-url').value=s.serverUrl||import.meta.env.VITE_SERVER_URL||'http://localhost:3001';showScreen('settings-screen');});
-['sp-back','mission-back','mp-back','join-back','lobby-back','garage-back','settings-back','btn-quit','btn-results-menu'].forEach(id=>$(id)?.addEventListener('click',showMain));
+['sp-back','mission-back','mp-back','join-back','garage-back','settings-back','btn-quit','btn-results-menu'].forEach(id=>$(id)?.addEventListener('click',showMain));
+$('lobby-back')?.addEventListener('click',()=>{roomManager?.leave();showScreen('mp-menu');});
 $('btn-resume')?.addEventListener('click',resumeGame);
 $('btn-restart')?.addEventListener('click',()=>startGame(mode,currentMission));
 $('btn-next-mission')?.addEventListener('click',()=>startGame('mission',(currentMission+1)%MISSION_DATA.length));
 $('btn-accept-order')?.addEventListener('click',acceptOrder);
-$('btn-start-race')?.addEventListener('click',()=>notify('السباق الجماعي يحتاج اتصالاً بالخادم.'));
+$('btn-start-race')?.addEventListener('click',()=>{
+  if (!roomHost || !network || !network.socket || !network.socket.connected) { notify('غير مول الغرفة يقدر يبدا السباق.'); return; }
+  raceStarted = false; network.emit('race:start', {});
+});
 $('touch-pause')?.addEventListener('click',pauseGame);
 $('touch-interact')?.addEventListener('click',acceptOrder);
 $('setting-server-url')?.addEventListener('change',e=>{const s=getSettings();s.serverUrl=e.target.value.trim();saveSettings(s);storage.set('serverUrl',s.serverUrl);});
