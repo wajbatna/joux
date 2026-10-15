@@ -1,0 +1,1 @@
+export class Leaderboard { constructor(){this.entries=[];} add(name,score){this.entries.push({name,score});this.entries.sort((a,b)=>b.score-a.score);this.entries=this.entries.slice(0,10);} getTop(){return [...this.entries];} }
