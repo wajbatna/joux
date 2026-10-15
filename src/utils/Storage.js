@@ -59,3 +59,10 @@ export function getPlayerProfile() {
 export function savePlayerProfile(profile) {
     saveData('profile', profile);
 }
+
+// Class facade used by the game UI.
+export class Storage {
+  get(key, fallback = null) { return loadData(key, fallback); }
+  set(key, value) { saveData(key, value); return value; }
+  remove(key) { try { const data = loadAllData(); delete data[key]; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {} }
+}
