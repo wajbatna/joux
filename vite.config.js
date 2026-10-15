@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -7,7 +6,8 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'terser'
+    // Use Vite's default esbuild minifier; terser is not installed.
+    minify: 'esbuild'
   },
   server: {
     port: 3000,
